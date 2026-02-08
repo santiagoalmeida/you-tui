@@ -1,156 +1,224 @@
-# you-tui
+# you-tui - YouTube Terminal Music Player
 
-🎵 **YouTube Music Player for Terminal** - A terminal-based music/video player for YouTube
-
-[![License](https://img.shields.io/badge/License-Custom%20Dual-blue.svg)](LICENSE)
-[![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com/)
+A terminal-based music player for YouTube with daemon/client architecture.
 
 ## Features
 
-- 🎵 **Play YouTube music/videos** directly from your terminal
-- 🔍 **Interactive search** with fuzzy selection (fzf)
-- 📋 **Persistent playlist** - never lose your queue
-- 🎯 **Jump to any track** - navigate freely through your playlist
-- 🔔 **Desktop notifications** - see what's playing
-- ⌨️  **Clean UI** - compact and keyboard-driven
-- 💾 **Auto-save** - resumes where you left off
+- 🎵 Play music from YouTube in the terminal
+- 🔍 Search and add songs/playlists with fzf
+- 📋 Persistent queue management
+- 🎮 Background daemon keeps music playing
+- 🖥️ Multiple TUI clients can connect
+- ⏯️ Full playback controls (play, pause, next, previous, jump)
 
-## Screenshots
+## Architecture
 
 ```
-─────────────────────────────────────────── you-tui ────────────────────────────────────────────
-♪ Now: Best of lofi hip hop 2024 [beats to relax/study to]
-  by Lofi Girl (6:10:58)
-
-📋 Queue (15 total, 12 pending):
-  1. 1 A.M Study Session 📚 [lofi hip hop] (1:01:14)
-  2. Chill Drive - Aesthetic Music ~ Lofi hip hop mix (2:53:52)
-  3. lofi hip hop radio – beats to sleep/study/relax to ☕ (LIVE)
-  ... and 9 more
-
-Menu:
-> 🔍 Search & Add
-  📜 View Playlist
-  🗑️  Clear Playlist
-  ⏯️  Pause/Resume
-  ⏭️  Next Track
-  ❌ Quit
+┌─────────────────────────────────────┐
+│   you-tui-daemon (background)       │
+│  - Manages MPV player               │
+│  - Maintains playlist queue         │
+│  - Listens on Unix socket           │
+│  - Auto-plays next track            │
+└─────────────────────────────────────┘
+              ↕ (Unix Socket)
+┌─────────────────────────────────────┐
+│   you-tui (TUI client)              │
+│  - Interactive menu interface       │
+│  - Search and add tracks            │
+│  - Control playback                 │
+│  - Can exit without stopping music  │
+└─────────────────────────────────────┘
 ```
 
-## Dependencies
-
-Make sure you have these installed:
-
-- `mpv` - Media player
-- `yt-dlp` - YouTube downloader
-- `fzf` - Fuzzy finder
-- `notify-send` (libnotify) - Desktop notifications
-- `.NET 10.0` SDK
-
-### Installation of dependencies
-
-**Arch Linux:**
-```bash
-sudo pacman -S mpv yt-dlp fzf libnotify dotnet-sdk
-```
-
-**Ubuntu/Debian:**
-```bash
-sudo apt install mpv yt-dlp fzf libnotify-bin
-# Install .NET SDK from: https://dotnet.microsoft.com/download
-```
-
-**Fedora:**
-```bash
-sudo dnf install mpv yt-dlp fzf libnotify dotnet-sdk-10.0
-```
+**Benefits:**
+- Music continues playing when you close the UI
+- Multiple clients can control the same player
+- Persistent state across sessions
+- Clean separation of concerns
 
 ## Installation
 
+### Dependencies
+
 ```bash
-git clone https://github.com/santyalmeida/you-tui.git
-cd you-tui
-dotnet build -c Release
+# Install required tools
+sudo apt install mpv yt-dlp fzf socat
+
+# Install .NET 10 SDK (if not installed)
+```
+
+### Build
+
+```bash
+# Build the project
+dotnet build
+
+# Or use the install script (copies to /usr/local/bin)
+./install.sh
 ```
 
 ## Usage
 
-```bash
-dotnet run
-```
-
-Or build and run the executable:
+### Quick Start
 
 ```bash
-dotnet build -c Release
-./bin/Release/net10.0/you-tui
+# Start the TUI client (auto-starts daemon if needed)
+./YouTui.Client/bin/Debug/net10.0/you-tui
+
+# Or if installed:
+you-tui
 ```
 
-### Controls
+### Command Line Tools
 
-1. **Search & Add** - Search YouTube and select tracks to add
-2. **View Playlist** - See all tracks and jump to any one
-3. **Clear Playlist** - Remove all tracks
-4. **Pause/Resume** - Toggle playback
-5. **Next Track** - Skip to next song
-6. **Quit** - Save and exit
+**Check daemon status:**
+```bash
+./you-tui-status
+```
 
-### Tips
+Output:
+```
+✅ Daemon running (PID: 12345)
 
-- Use **TAB** in search results to select multiple tracks
-- Press **ESC** to cancel selection
-- The playlist persists between sessions
-- Desktop notifications show current track
+🎵 ▶️ Now Playing:
+   Toto - Africa (Official HD Video)
+   by TOTO (04:32)
+
+📋 Playlist: 11 tracks
+   Position: 6/11
+   Remaining: 5 tracks
+```
+
+**Manual daemon control:**
+```bash
+# Start daemon manually
+./YouTui.Daemon/bin/Debug/net10.0/you-tui-daemon
+
+# Stop daemon
+echo '{"command":"Stop"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock
+```
+
+### TUI Controls
+
+In the interactive menu:
+
+- **🔍 Search & Add** - Search YouTube and add tracks to queue
+- **📜 View Playlist** - See full playlist and jump to any track
+- **🗑️ Clear Playlist** - Remove all tracks from queue
+- **⏯️ Pause/Resume** - Toggle playback
+- **⏮️ Previous Track** - Go to previous song
+- **⏭️ Next Track** - Skip to next song
+- **🛑 Quit Daemon** - Stop daemon and music
+- **❌ Quit** - Exit client only (music continues)
+
+### Direct Daemon Commands
+
+You can send JSON commands directly to the daemon:
+
+```bash
+# Get status
+echo '{"command":"GetStatus"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock
+
+# Play/Pause
+echo '{"command":"Play"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock
+echo '{"command":"Pause"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock
+
+# Next/Previous
+echo '{"command":"Next"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock
+echo '{"command":"Previous"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock
+
+# Jump to track by index
+echo '{"command":"JumpTo","data":{"index":3}}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock
+
+# Clear queue
+echo '{"command":"ClearQueue"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock
+
+# Stop daemon
+echo '{"command":"Stop"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock
+```
+
+## Configuration
+
+- **Playlist history:** `~/.config/you-tui/history.json`
+- **Daemon socket:** `/tmp/you-tui-daemon.sock`
+- **MPV socket:** `/tmp/you-tui-mpv.sock`
+
+## Systemd Service (Optional)
+
+To run the daemon as a systemd user service:
+
+```bash
+# Install service file
+cp you-tui-daemon.service ~/.config/systemd/user/
+
+# Enable and start
+systemctl --user enable you-tui-daemon
+systemctl --user start you-tui-daemon
+
+# Check status
+systemctl --user status you-tui-daemon
+```
 
 ## Project Structure
 
 ```
 you-tui/
-├── Models/
-│   └── Track.cs              # Track data model
-├── Services/
-│   ├── PlaybackQueue.cs      # Playlist management with persistence
-│   ├── MpvPlayer.cs          # MPV control via IPC socket
-│   ├── YouTubeSearcher.cs    # YouTube search with yt-dlp
-│   ├── FzfSelector.cs        # Interactive fuzzy selector
-│   └── NotificationManager.cs # Desktop notifications
-├── YouTuiApp.cs              # Main application logic
-├── Program.cs                # Entry point
-└── README.md
+├── YouTui.Shared/          # Shared models and protocol
+│   └── Models/
+│       ├── Track.cs
+│       ├── DaemonCommand.cs
+│       ├── DaemonResponse.cs
+│       └── DaemonStatus.cs
+├── YouTui.Daemon/          # Background daemon
+│   ├── Services/
+│   │   ├── DaemonServer.cs      # Unix socket server
+│   │   ├── PlaybackEngine.cs    # Auto-advance logic
+│   │   ├── CommandHandler.cs    # Command processing
+│   │   ├── PlaybackQueue.cs     # Queue management
+│   │   └── MpvPlayer.cs         # MPV interface
+│   └── Program.cs
+├── YouTui.Client/          # TUI client
+│   ├── Services/
+│   │   ├── DaemonClient.cs      # Socket client
+│   │   ├── YouTubeSearcher.cs   # YouTube search
+│   │   ├── FzfSelector.cs       # fzf integration
+│   │   └── NotificationManager.cs
+│   ├── YouTuiApp.cs             # Main TUI
+│   └── Program.cs
+└── you-tui-status              # Status helper script
 ```
 
-## Configuration
+## Troubleshooting
 
-Playlist history is saved at:
-```
-~/.config/you-tui/history.json
-```
+**Daemon won't start:**
+- Check if MPV is installed: `which mpv`
+- Check daemon logs: `tail /tmp/you-tui-daemon.log`
+- Remove stale socket: `rm /tmp/you-tui-daemon.sock /tmp/you-tui-mpv.sock`
+
+**No sound:**
+- Test MPV directly: `mpv --audio-display=no "https://www.youtube.com/watch?v=dQw4w9WgXcQ"`
+- Check MPV socket: `ls -l /tmp/you-tui-mpv.sock`
+
+**Client can't connect:**
+- Verify daemon is running: `./you-tui-status`
+- Check socket exists: `ls -l /tmp/you-tui-daemon.sock`
+- Try restarting daemon
 
 ## License
 
-This project uses a **Custom Dual License**:
+This project is licensed under a dual license:
 
-- ✅ **Free for personal/non-commercial use** - Use it, modify it, share it!
-- 💰 **Commercial use requires revenue sharing** - If you make money with it, you must share a minimum of 30% of gross revenue with the author.
+- **Free for personal and open-source use:** You can use, modify, and distribute this software freely.
+- **Commercial use:** If you want to commercialize this software or derivatives, you must share at least 30% of gross revenue with the original author.
 
-See [LICENSE](LICENSE) for full details.
+See LICENSE file for full terms.
 
-## Contributing
+## Credits
 
-Contributions are welcome! Please note that by contributing, you agree that your contributions will be licensed under the same dual license.
-
-## Author
-
-Created by **Santiago Almeida**
-
-## Acknowledgments
-
-- Built with [Spectre.Console](https://spectreconsole.net/)
-- Powered by [mpv](https://mpv.io/), [yt-dlp](https://github.com/yt-dlp/yt-dlp), and [fzf](https://github.com/junegunn/fzf)
-
----
-
-**Enjoy your music!** 🎶
-
-If you find this useful, consider ⭐ starring the repo!
-
+Built with:
+- [.NET 10](https://dotnet.microsoft.com/)
+- [Spectre.Console](https://spectreconsole.net/) - Beautiful terminal UIs
+- [MPV](https://mpv.io/) - Media player
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - YouTube downloader
+- [fzf](https://github.com/junegunn/fzf) - Fuzzy finder

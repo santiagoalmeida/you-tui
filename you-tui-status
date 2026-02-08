@@ -1,0 +1,44 @@
+#!/bin/bash
+# Ver status del daemon you-tui
+
+# Verificar si el daemon está corriendo
+PID=$(pgrep -f you-tui-daemon 2>/dev/null)
+if [ -z "$PID" ]; then
+    echo "❌ Daemon not running"
+    echo "   Start with: you-tui-daemon"
+    exit 1
+fi
+
+echo "✅ Daemon running (PID: $PID)"
+echo ""
+
+# Obtener status y mostrar info básica
+echo '{"command":"GetStatus"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock 2>/dev/null | \
+python3 -c "
+import sys, json
+data = sys.stdin.read()
+# Remove BOM
+data = data.lstrip('\ufeff')
+if not data:
+    print('❌ No response from daemon')
+    sys.exit(1)
+    
+result = json.loads(data)
+d = result.get('Data', {})
+
+# Current track
+track = d.get('CurrentTrack')
+if track:
+    playing = '▶️ ' if d.get('IsPlaying') else '⏸️ '
+    print(f'🎵 {playing}Now Playing:')
+    print(f'   {track[\"Title\"]}')
+    print(f'   by {track[\"Uploader\"]} ({track[\"Duration\"]})')
+else:
+    print('🎵 Nothing playing')
+
+# Playlist info
+print(f'\n📋 Playlist: {d.get(\"QueueLength\", 0)} tracks')
+if d.get('CurrentIndex', -1) >= 0:
+    print(f'   Position: {d[\"CurrentIndex\"] + 1}/{d[\"QueueLength\"]}')
+    print(f'   Remaining: {d.get(\"PendingCount\", 0)} tracks')
+"

@@ -2,9 +2,9 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using YouTui.Models;
+using YouTui.Shared.Models;
 
-namespace YouTui.Services;
+namespace YouTui.Daemon.Services;
 
 public class MpvPlayer : IDisposable
 {
@@ -82,7 +82,7 @@ public class MpvPlayer : IDisposable
         await SendCommandAsync(new { command = new[] { "playlist-next" } });
     }
 
-    private async Task SendCommandAsync(object command)
+    public async Task SendCommandAsync(object command)
     {
         if (_endpoint == null || !_isRunning) return;
 
@@ -99,6 +99,74 @@ public class MpvPlayer : IDisposable
         {
             // Socket error, mpv might have closed
         }
+    }
+
+    private async Task<string?> SendCommandWithResponseAsync(object command)
+    {
+        if (_endpoint == null || !_isRunning) return null;
+
+        try
+        {
+            using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+            await socket.ConnectAsync(_endpoint);
+
+            var json = JsonSerializer.Serialize(command) + "\n";
+            var bytes = Encoding.UTF8.GetBytes(json);
+            await socket.SendAsync(bytes, SocketFlags.None);
+
+            // Read response
+            var buffer = new byte[4096];
+            var received = await socket.ReceiveAsync(buffer, SocketFlags.None);
+            return Encoding.UTF8.GetString(buffer, 0, received);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    public async Task<double> GetTimePositionAsync()
+    {
+        try
+        {
+            var response = await SendCommandWithResponseAsync(new
+            {
+                command = new[] { "get_property", "time-pos" }
+            });
+
+            if (response != null && response.Contains("data"))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(response, @"""data"":\s*([0-9.]+)");
+                if (match.Success && double.TryParse(match.Groups[1].Value, out var pos))
+                {
+                    return pos;
+                }
+            }
+        }
+        catch { }
+        return 0;
+    }
+
+    public async Task<double> GetDurationAsync()
+    {
+        try
+        {
+            var response = await SendCommandWithResponseAsync(new
+            {
+                command = new[] { "get_property", "duration" }
+            });
+
+            if (response != null && response.Contains("data"))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(response, @"""data"":\s*([0-9.]+)");
+                if (match.Success && double.TryParse(match.Groups[1].Value, out var dur))
+                {
+                    return dur;
+                }
+            }
+        }
+        catch { }
+        return 0;
     }
 
     public void Dispose()

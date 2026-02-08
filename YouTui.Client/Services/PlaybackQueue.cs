@@ -1,7 +1,7 @@
 using System.Text.Json;
-using YouTui.Models;
+using YouTui.Shared.Models;
 
-namespace YouTui.Services;
+namespace YouTui.Client.Services;
 
 public class PlaybackQueue
 {

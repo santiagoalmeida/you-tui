@@ -1,24 +1,23 @@
 using System.Text;
 using Spectre.Console;
-using YouTui.Models;
-using YouTui.Services;
+using YouTui.Shared.Models;
+using YouTui.Client.Services;
 using SpectreColor = Spectre.Console.Color;
 
-namespace YouTui;
+namespace YouTui.Client;
 
 public class YouTuiApp
 {
-    private readonly PlaybackQueue _queue;
-    private readonly MpvPlayer _player;
+    private readonly DaemonClient _daemonClient;
     private readonly YouTubeSearcher _searcher;
     private readonly FzfSelector _selector;
     private readonly NotificationManager _notifications;
     private bool _isRunning;
+    private DaemonStatus? _lastStatus;
 
     public YouTuiApp()
     {
-        _queue = new PlaybackQueue();
-        _player = new MpvPlayer();
+        _daemonClient = new DaemonClient();
         _searcher = new YouTubeSearcher();
         _selector = new FzfSelector();
         _notifications = new NotificationManager();
@@ -55,23 +54,25 @@ public class YouTuiApp
                 ctx.Status("Checking dependencies...");
                 await CheckDependenciesAsync();
 
-                ctx.Status("Loading playlist...");
-                await _queue.LoadHistoryAsync();
+                ctx.Status("Connecting to daemon...");
+                var isRunning = await _daemonClient.IsDaemonRunningAsync();
+                if (!isRunning)
+                {
+                    ctx.Status("Starting daemon...");
+                    await StartDaemonAsync();
+                    await Task.Delay(1000); // Give daemon time to start
+                }
 
-                ctx.Status("Starting MPV player...");
-                await _player.InitializeAsync();
-
+                _lastStatus = await _daemonClient.GetStatusAsync();
                 _isRunning = true;
             });
 
-        if (_queue.Count > 0 || _queue.TotalCount > 0)
+        if (_lastStatus != null && _lastStatus.QueueLength > 0)
         {
-            AnsiConsole.MarkupLine($"[green]✓[/] Loaded {_queue.TotalCount} tracks");
-            if (_queue.Count > 0 && _queue.CurrentTrack != null)
+            AnsiConsole.MarkupLine($"[green]✓[/] Loaded {_lastStatus.QueueLength} tracks");
+            if (_lastStatus.CurrentTrack != null && _lastStatus.IsPlaying)
             {
-                // Resume from where we left off
-                await _player.PlayAsync(_queue.CurrentTrack);
-                await _notifications.ShowNowPlayingAsync(_queue.CurrentTrack);
+                await _notifications.ShowNowPlayingAsync(_lastStatus.CurrentTrack);
             }
             await Task.Delay(1500);
         }
@@ -80,6 +81,30 @@ public class YouTuiApp
             AnsiConsole.MarkupLine("[yellow]📋 Playlist is empty[/]");
             await Task.Delay(1500);
         }
+    }
+
+    private async Task StartDaemonAsync()
+    {
+        var startInfo = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "you-tui-daemon",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        System.Diagnostics.Process.Start(startInfo);
+        
+        // Wait for daemon to be ready
+        for (int i = 0; i < 10; i++)
+        {
+            await Task.Delay(500);
+            if (await _daemonClient.IsDaemonRunningAsync())
+                return;
+        }
+        
+        throw new Exception("Failed to start daemon");
     }
 
     private async Task CheckDependenciesAsync()

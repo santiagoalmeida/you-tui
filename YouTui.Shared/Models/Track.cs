@@ -1,4 +1,4 @@
-namespace YouTui.Models;
+namespace YouTui.Shared.Models;
 
 public class Track
 {

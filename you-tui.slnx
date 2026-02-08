@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="YouTui.Client/YouTui.Client.csproj" />
+  <Project Path="YouTui.Daemon/YouTui.Daemon.csproj" />
+  <Project Path="YouTui.Shared/YouTui.Shared.csproj" />
+</Solution>
