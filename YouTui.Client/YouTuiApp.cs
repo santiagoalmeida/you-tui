@@ -273,16 +273,19 @@ public class YouTuiApp
         {
             case 's':
                 _inSubScreen = true;
+                AnsiConsole.Clear(); // Clear immediately
                 await SearchAndAddAsync();
                 _inSubScreen = false;
                 break;
             case 'p':
                 _inSubScreen = true;
+                AnsiConsole.Clear(); // Clear immediately
                 await ViewFullPlaylistAsync();
                 _inSubScreen = false;
                 break;
             case 'l':
                 _inSubScreen = true;
+                AnsiConsole.Clear(); // Clear immediately
                 await LivePlayerViewAsync();
                 _inSubScreen = false;
                 break;
@@ -487,8 +490,7 @@ public class YouTuiApp
 
     private async Task SearchAndAddAsync()
     {
-        // Clear screen and show only search interface
-        AnsiConsole.Clear();
+        // Screen already cleared in HandleKeyPressAsync
         AnsiConsole.MarkupLine("[cyan]═══ YouTube Search ═══[/]\n");
         
         var query = AnsiConsole.Prompt(
@@ -548,9 +550,7 @@ public class YouTuiApp
 
     private async Task ViewFullPlaylistAsync()
     {
-        // Clear screen and show only playlist
-        AnsiConsole.Clear();
-        
+        // Screen already cleared in HandleKeyPressAsync
         var status = await _daemonClient.GetStatusAsync();
         
         if (status == null || status.QueueLength == 0)
