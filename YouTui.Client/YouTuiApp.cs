@@ -20,6 +20,7 @@ public class YouTuiApp
     private const double SCROLL_SPEED = 0.3; // seconds per character
     private CancellationTokenSource? _updateCancellation;
     private Task? _updateTask;
+    private bool _inSubScreen = false; // Flag to pause main screen updates
 
     public YouTuiApp()
     {
@@ -220,16 +221,20 @@ public class YouTuiApp
         {
             try
             {
-                // Update status from daemon
-                _lastStatus = await _daemonClient.GetStatusAsync();
-                
-                // Redraw screen
-                Console.SetCursorPosition(0, 3);
-                ShowCompactStatus();
-                
-                // Clear extra lines
-                for (int i = 0; i < 5; i++)
-                    Console.WriteLine(new string(' ', 80));
+                // Only update screen if not in a sub-screen
+                if (!_inSubScreen)
+                {
+                    // Update status from daemon
+                    _lastStatus = await _daemonClient.GetStatusAsync();
+                    
+                    // Redraw screen
+                    Console.SetCursorPosition(0, 3);
+                    ShowCompactStatus();
+                    
+                    // Clear extra lines
+                    for (int i = 0; i < 5; i++)
+                        Console.WriteLine(new string(' ', 80));
+                }
                 
                 // Wait 1 second before next update
                 await Task.Delay(1000);
@@ -253,13 +258,19 @@ public class YouTuiApp
         switch (char.ToLower(keyChar))
         {
             case 's':
+                _inSubScreen = true;
                 await SearchAndAddAsync();
+                _inSubScreen = false;
                 break;
             case 'p':
+                _inSubScreen = true;
                 await ViewFullPlaylistAsync();
+                _inSubScreen = false;
                 break;
             case 'l':
+                _inSubScreen = true;
                 await LivePlayerViewAsync();
+                _inSubScreen = false;
                 break;
             case 'c':
                 await ClearQueueAsync();
@@ -277,17 +288,22 @@ public class YouTuiApp
                 await _daemonClient.PreviousAsync();
                 break;
             case 'q':
+                _inSubScreen = true;
                 var confirm = AnsiConsole.Confirm("[yellow]Quit you-tui?[/]");
                 if (confirm)
                     _isRunning = false;
+                _inSubScreen = false;
                 break;
         }
         
-        // Redraw after action
-        if (_isRunning)
+        // Redraw after action (only if not in subscreen)
+        if (_isRunning && !_inSubScreen)
         {
             AnsiConsole.Clear();
             AnsiConsole.MarkupLine("[cyan]you-tui - Keyboard Controls:[/]");
+            AnsiConsole.MarkupLine("[grey]s:Search | p:Playlist | l:Live View | c:Clear | space:Pause/Play | n:Next | b:Previous | q:Quit[/]\n");
+        }
+    }
             AnsiConsole.MarkupLine("[grey]s:Search | p:Playlist | l:Live View | c:Clear | space:Pause/Play | n:Next | b:Previous | q:Quit[/]\n");
         }
     }
