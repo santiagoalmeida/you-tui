@@ -66,16 +66,30 @@ public class YouTuiApp
                 
                 if (!isRunning)
                 {
-                    AnsiConsole.MarkupLine("[yellow]Daemon not running, trying to start it...[/]");
                     ctx.Status("Starting daemon...");
                     await StartDaemonAsync();
-                    await Task.Delay(1000);
+                    
+                    // Wait and verify daemon started
+                    for (int i = 0; i < 10; i++)
+                    {
+                        await Task.Delay(500);
+                        isRunning = await _daemonClient.IsDaemonRunningAsync();
+                        if (isRunning) break;
+                    }
+                    
+                    if (!isRunning)
+                    {
+                        throw new Exception("Failed to start daemon. Check if MPV is installed.");
+                    }
+                    
+                    AnsiConsole.MarkupLine("[green]✓ Daemon started successfully[/]");
                 }
                 else
                 {
                     AnsiConsole.MarkupLine("[green]✓ Connected to running daemon[/]");
                 }
 
+                ctx.Status("Loading status...");
                 _lastStatus = await _daemonClient.GetStatusAsync();
                 _isRunning = true;
             });
