@@ -59,12 +59,28 @@ public class MpvPlayer : IDisposable
 
     public async Task PlayAsync(Track track)
     {
+        // Load and play immediately, clearing playlist
         await SendCommandAsync(new { command = new[] { "loadfile", track.Url, "replace" } });
     }
 
     public async Task AddToPlaylistAsync(Track track)
     {
+        // Add to MPV's internal playlist
         await SendCommandAsync(new { command = new[] { "loadfile", track.Url, "append-play" } });
+    }
+    
+    public async Task LoadPlaylistAsync(List<Track> tracks)
+    {
+        if (tracks.Count == 0) return;
+        
+        // Load first track
+        await SendCommandAsync(new { command = new[] { "loadfile", tracks[0].Url, "replace" } });
+        
+        // Add rest to playlist
+        for (int i = 1; i < tracks.Count; i++)
+        {
+            await SendCommandAsync(new { command = new[] { "loadfile", tracks[i].Url, "append-play" } });
+        }
     }
 
     public async Task PauseAsync()

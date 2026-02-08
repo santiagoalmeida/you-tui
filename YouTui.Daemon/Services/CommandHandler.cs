@@ -32,6 +32,7 @@ public class CommandHandler
                     {
                         _queue.Enqueue(addTrackData.Track);
                         await _queue.SaveHistoryAsync();
+                        await _engine.AddTrackToPlaylistAsync(addTrackData.Track);
                         await _engine.EnsurePlayingAsync();
                     }
                     return SuccessResponse();
@@ -41,7 +42,10 @@ public class CommandHandler
                     if (addTracksData?.Tracks != null)
                     {
                         foreach (var track in addTracksData.Tracks)
+                        {
                             _queue.Enqueue(track);
+                            await _engine.AddTrackToPlaylistAsync(track);
+                        }
                         await _queue.SaveHistoryAsync();
                         await _engine.EnsurePlayingAsync();
                     }

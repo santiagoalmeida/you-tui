@@ -613,7 +613,7 @@ public class YouTuiApp
                     Border = BoxBorder.Rounded,
                     BorderStyle = new Style(_lastStatus.IsPlaying ? SpectreColor.Green : SpectreColor.Yellow),
                     Padding = new Padding(1, 0),
-                    Width = 64  // Fixed width (20% less than 80)
+                    Expand = false  // Auto-fit to content width
                 };
                 
                 AnsiConsole.Write(panel);

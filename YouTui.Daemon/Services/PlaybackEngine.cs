@@ -34,13 +34,24 @@ public class PlaybackEngine
             await PlayCurrentAsync();
         }
     }
+    
+    public async Task AddTrackToPlaylistAsync(Track track)
+    {
+        // Add track to MPV playlist if already playing
+        if (_isPlaying)
+        {
+            await _player.AddToPlaylistAsync(track);
+        }
+    }
 
     public async Task PlayCurrentAsync()
     {
         var track = _queue.CurrentTrack;
         if (track != null)
         {
-            await _player.PlayAsync(track);
+            // Load current track and all remaining tracks to MPV playlist
+            var remainingTracks = _queue.GetAllTracks().Skip(_queue.GetCurrentIndex()).ToList();
+            await _player.LoadPlaylistAsync(remainingTracks);
             _isPlaying = true;
         }
     }
@@ -66,7 +77,8 @@ public class PlaybackEngine
         
         if (nextTrack != null)
         {
-            await _player.PlayAsync(nextTrack);
+            // Use MPV's playlist-next command instead of reloading
+            await _player.NextAsync();
             _isPlaying = true;
         }
         else
