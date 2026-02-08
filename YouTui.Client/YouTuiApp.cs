@@ -190,81 +190,79 @@ public class YouTuiApp
         _updateCancellation = new CancellationTokenSource();
         _updateTask = Task.Run(async () => await UpdateLoopAsync(_updateCancellation.Token));
         
+        // Show initial instructions
+        AnsiConsole.Clear();
+        AnsiConsole.MarkupLine("[cyan]you-tui - Keyboard Controls:[/]");
+        AnsiConsole.MarkupLine("[grey]s:Search | p:Playlist | l:Live View | c:Clear | space:Pause/Play | n:Next | b:Previous | q:Quit[/]\n");
+        
         while (_isRunning)
         {
-            // Update status once before showing menu
+            // Update status from daemon
             _lastStatus = await _daemonClient.GetStatusAsync();
             
-            AnsiConsole.Clear();
+            // Redraw screen
+            Console.SetCursorPosition(0, 3);
             ShowCompactStatus();
             
-            var choice = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[cyan]Menu:[/]")
-                    .PageSize(10)
-                    .AddChoices(new[]
-                    {
-                        "🔍 Search & Add",
-                        "📜 View Playlist",
-                        "📺 Live Player View",
-                        "🗑️  Clear Playlist",
-                        "⏯️  Pause/Resume",
-                        "⏮️  Previous Track",
-                        "⏭️  Next Track",
-                        "🛑 Quit Daemon",
-                        "❌ Quit"
-                    })
-            );
-
-            switch (choice)
+            // Check for keyboard input (non-blocking)
+            if (Console.KeyAvailable)
             {
-                case "🔍 Search & Add":
-                    await SearchAndAddAsync();
-                    break;
-                case "📜 View Playlist":
-                    await ViewFullPlaylistAsync();
-                    break;
-                case "📺 Live Player View":
-                    await LivePlayerViewAsync();
-                    break;
-                case "🗑️  Clear Playlist":
-                    await ClearQueueAsync();
-                    await Task.Delay(1000);
-                    break;
-                case "⏯️  Pause/Resume":
-                    if (_lastStatus?.IsPlaying == true)
-                        await _daemonClient.PauseAsync();
-                    else
-                        await _daemonClient.PlayAsync();
-                    AnsiConsole.MarkupLine("[yellow]⏯️  Toggled pause[/]");
-                    await Task.Delay(800);
-                    break;
-                case "⏮️  Previous Track":
-                    await _daemonClient.PreviousAsync();
-                    AnsiConsole.MarkupLine("[green]⏮️  Previous track[/]");
-                    await Task.Delay(1000);
-                    break;
-                case "⏭️  Next Track":
-                    await _daemonClient.NextAsync();
-                    AnsiConsole.MarkupLine("[green]⏭️  Skipped to next track[/]");
-                    await Task.Delay(1000);
-                    break;
-                case "🛑 Quit Daemon":
-                    await _daemonClient.StopDaemonAsync();
-                    AnsiConsole.MarkupLine("[yellow]🛑 Daemon stopped[/]");
-                    await Task.Delay(1000);
-                    _isRunning = false;
-                    break;
-                case "❌ Quit":
-                    _isRunning = false;
-                    break;
+                var key = Console.ReadKey(true);
+                await HandleKeyPressAsync(key.KeyChar);
             }
+            
+            // Wait 1 second before next update
+            await Task.Delay(1000);
         }
         
         // Stop update loop
         _updateCancellation?.Cancel();
         if (_updateTask != null)
             await _updateTask;
+    }
+
+    private async Task HandleKeyPressAsync(char keyChar)
+    {
+        switch (char.ToLower(keyChar))
+        {
+            case 's':
+                await SearchAndAddAsync();
+                break;
+            case 'p':
+                await ViewFullPlaylistAsync();
+                break;
+            case 'l':
+                await LivePlayerViewAsync();
+                break;
+            case 'c':
+                await ClearQueueAsync();
+                break;
+            case ' ':
+                if (_lastStatus?.IsPlaying == true)
+                    await _daemonClient.PauseAsync();
+                else
+                    await _daemonClient.PlayAsync();
+                break;
+            case 'n':
+                await _daemonClient.NextAsync();
+                break;
+            case 'b':
+                await _daemonClient.PreviousAsync();
+                break;
+            case 'q':
+                var confirm = AnsiConsole.Confirm("[yellow]Quit you-tui?[/]");
+                if (confirm)
+                    _isRunning = false;
+                break;
+        }
+        
+        // Redraw after action
+        if (_isRunning)
+        {
+            AnsiConsole.Clear();
+            AnsiConsole.MarkupLine("[cyan]you-tui - Keyboard Controls:[/]");
+            AnsiConsole.MarkupLine("[grey]s:Search | p:Playlist | l:Live View | c:Clear | space:Pause/Play | n:Next | b:Previous | q:Quit[/]\n");
+        }
     }
 
     private async Task UpdateLoopAsync(CancellationToken cancellationToken)
