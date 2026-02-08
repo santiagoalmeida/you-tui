@@ -460,6 +460,10 @@ public class YouTuiApp
 
     private async Task SearchAndAddAsync()
     {
+        // Clear screen and show only search interface
+        AnsiConsole.Clear();
+        AnsiConsole.MarkupLine("[cyan]═══ YouTube Search ═══[/]\n");
+        
         var query = AnsiConsole.Prompt(
             new TextPrompt<string>("[cyan]🔍 Search YouTube:[/]")
                 .AllowEmpty()
@@ -467,7 +471,7 @@ public class YouTuiApp
         
         if (string.IsNullOrWhiteSpace(query))
         {
-            AnsiConsole.MarkupLine("[grey]Search cancelled[/]");
+            AnsiConsole.MarkupLine("\n[grey]Search cancelled[/]");
             await Task.Delay(800);
             return;
         }
@@ -482,18 +486,21 @@ public class YouTuiApp
 
         if (results.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No results found[/]");
-            await Task.Delay(1500);
+            AnsiConsole.MarkupLine("\n[yellow]No results found[/]");
+            AnsiConsole.MarkupLine("[grey]Press any key to continue...[/]");
+            Console.ReadKey(true);
             return;
         }
 
         // Direct to fzf selector without showing table
-        AnsiConsole.MarkupLine($"[green]✓ Found {results.Count} results[/]");
-        AnsiConsole.MarkupLine("[grey]Opening selector... (TAB to select multiple, Enter to add)[/]");
+        AnsiConsole.MarkupLine($"\n[green]✓ Found {results.Count} results[/]");
+        AnsiConsole.MarkupLine("[grey]Opening selector... (TAB to select multiple, Enter to add, ESC to cancel)[/]");
         await Task.Delay(500);
 
         var selected = await _selector.SelectMultipleAsync(results);
 
+        AnsiConsole.Clear();
+        
         if (selected.Count == 0)
         {
             AnsiConsole.MarkupLine("[yellow]No tracks selected[/]");
@@ -514,74 +521,52 @@ public class YouTuiApp
 
     private async Task ViewFullPlaylistAsync()
     {
-        var logPath = "/tmp/you-tui-view-playlist.log";
-        try
+        // Clear screen and show only playlist
+        AnsiConsole.Clear();
+        
+        var status = await _daemonClient.GetStatusAsync();
+        
+        if (status == null || status.QueueLength == 0)
         {
-            await File.WriteAllTextAsync(logPath, $"[{DateTime.Now:HH:mm:ss}] ViewFullPlaylistAsync started\n");
-            
-            var status = await _daemonClient.GetStatusAsync();
-            await File.AppendAllTextAsync(logPath, $"  Status received: null? {status == null}, QueueLength: {status?.QueueLength ?? -1}\n");
-            
-            if (status == null || status.QueueLength == 0)
-            {
-                await File.AppendAllTextAsync(logPath, "  Showing 'Playlist is empty' message\n");
-                AnsiConsole.MarkupLine("[yellow]Playlist is empty[/]");
-                await Task.Delay(1500);
-                return;
-            }
-
-            await File.AppendAllTextAsync(logPath, $"  Queue count: {status.Queue?.Count ?? -1}\n");
-            
-            var choices = new List<string>();
-            choices.Add("[grey]← Back to menu[/]");
-            
-            for (int i = 0; i < status.Queue.Count; i++)
-            {
-                var track = status.Queue[i];
-                var prefix = i == status.CurrentIndex ? "▶ " : "  ";
-                var title = track.Title.EscapeMarkup();
-                var uploader = track.Uploader.EscapeMarkup();
-                // Use double brackets [[ ]] to escape them in Spectre.Console markup
-                choices.Add($"{prefix}[[{i}]] {title} - {uploader} ({track.Duration})");
-            }
-
-            await File.AppendAllTextAsync(logPath, $"  Created {choices.Count} choices\n");
-            await File.AppendAllTextAsync(logPath, "  Showing SelectionPrompt...\n");
-
-            var selected = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title($"[cyan]Full Playlist ({status.QueueLength} tracks):[/]")
-                    .PageSize(15)
-                    .AddChoices(choices)
-            );
-
-            await File.AppendAllTextAsync(logPath, $"  Selected: {selected}\n");
-
-            if (selected.Contains("Back to menu"))
-            {
-                await File.AppendAllTextAsync(logPath, "  User selected Back to menu\n");
-                return;
-            }
-
-            var match = System.Text.RegularExpressions.Regex.Match(selected, @"\[(\d+)\]");
-            if (match.Success)
-            {
-                var index = int.Parse(match.Groups[1].Value);
-                await File.AppendAllTextAsync(logPath, $"  Jumping to index {index}\n");
-                await _daemonClient.JumpToAsync(index);
-                AnsiConsole.MarkupLine($"[green]✓ Jumped to track {index}[/]");
-                await Task.Delay(1000);
-            }
+            AnsiConsole.MarkupLine("[yellow]Playlist is empty[/]");
+            AnsiConsole.MarkupLine("\n[grey]Press any key to continue...[/]");
+            Console.ReadKey(true);
+            return;
         }
-        catch (Exception ex)
+        
+        var choices = new List<string>();
+        choices.Add("[grey]← Back[/]");
+        
+        for (int i = 0; i < status.Queue.Count; i++)
         {
-            await File.AppendAllTextAsync(logPath, $"  EXCEPTION: {ex.GetType().Name}\n");
-            await File.AppendAllTextAsync(logPath, $"  Message: {ex.Message}\n");
-            await File.AppendAllTextAsync(logPath, $"  Stack: {ex.StackTrace}\n");
-            
-            AnsiConsole.MarkupLine($"[red]Error viewing playlist: {ex.Message}[/]");
-            AnsiConsole.MarkupLine($"[grey]{ex.StackTrace}[/]");
-            await Task.Delay(3000);
+            var track = status.Queue[i];
+            var prefix = i == status.CurrentIndex ? "▶ " : "  ";
+            var title = track.Title.EscapeMarkup();
+            var uploader = track.Uploader.EscapeMarkup();
+            // Use double brackets [[ ]] to escape them in Spectre.Console markup
+            choices.Add($"{prefix}[[{i}]] {title} - {uploader} ({track.Duration})");
+        }
+
+        var selected = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"[cyan]═══ Playlist ({status.QueueLength} tracks) ═══[/]")
+                .PageSize(15)
+                .AddChoices(choices)
+        );
+
+        if (selected.Contains("Back"))
+        {
+            return;
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(selected, @"\[(\d+)\]");
+        if (match.Success)
+        {
+            var index = int.Parse(match.Groups[1].Value);
+            await _daemonClient.JumpToAsync(index);
+            AnsiConsole.Clear();
+            AnsiConsole.MarkupLine($"[green]✓ Jumped to track {index}[/]");
+            await Task.Delay(1000);
         }
     }
 
