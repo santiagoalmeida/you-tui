@@ -19,8 +19,14 @@ public class DaemonClient : IDisposable
         try
         {
             using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+            socket.SendTimeout = 5000; // 5 seconds
+            socket.ReceiveTimeout = 5000; // 5 seconds
+            
             var endpoint = new UnixDomainSocketEndPoint(_socketPath);
-            await socket.ConnectAsync(endpoint);
+            
+            // Use Task.WaitAsync for timeout on connect
+            var connectTask = socket.ConnectAsync(endpoint);
+            await connectTask.WaitAsync(TimeSpan.FromSeconds(5));
 
             using var stream = new NetworkStream(socket);
             // Use UTF8Encoding(false) for writing (no BOM), Encoding.UTF8 with BOM detection for reading
@@ -47,6 +53,10 @@ public class DaemonClient : IDisposable
             
             return JsonSerializer.Deserialize<DaemonResponse>(response, options) 
                 ?? ErrorResponse("Invalid response format");
+        }
+        catch (TimeoutException)
+        {
+            return ErrorResponse("Daemon connection timeout");
         }
         catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionRefused || 
                                           ex.SocketErrorCode == SocketError.AddressNotAvailable)
