@@ -31,7 +31,7 @@ public class MpvPlayer : IDisposable
             StartInfo = new ProcessStartInfo
             {
                 FileName = "mpv",
-                Arguments = $"--no-video --idle=yes --input-ipc-server={_socketPath}",
+                Arguments = $"--no-video --idle=yes --input-ipc-server={_socketPath} --keep-open=no",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -64,7 +64,7 @@ public class MpvPlayer : IDisposable
 
     public async Task AddToPlaylistAsync(Track track)
     {
-        await SendCommandAsync(new { command = new[] { "loadfile", track.Url, "append" } });
+        await SendCommandAsync(new { command = new[] { "loadfile", track.Url, "append-play" } });
     }
 
     public async Task PauseAsync()
