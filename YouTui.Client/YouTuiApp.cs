@@ -241,13 +241,11 @@ public class YouTuiApp
                     // Update status from daemon
                     _lastStatus = await _daemonClient.GetStatusAsync();
                     
-                    // Redraw screen
-                    Console.SetCursorPosition(0, 3);
+                    // Clear and redraw entire screen
+                    AnsiConsole.Clear();
+                    AnsiConsole.MarkupLine("[cyan]you-tui - Keyboard Controls:[/]");
+                    AnsiConsole.MarkupLine("[grey]s:Search | p:Playlist | l:Live View | c:Clear | space:Pause/Play | n:Next | b:Previous | q:Quit[/]\n");
                     ShowCompactStatus();
-                    
-                    // Clear extra lines
-                    for (int i = 0; i < 5; i++)
-                        Console.WriteLine(new string(' ', 80));
                 }
                 
                 // Wait 1 second before next update
