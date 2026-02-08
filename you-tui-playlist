@@ -1,0 +1,54 @@
+#!/bin/bash
+# Ver playlist del daemon you-tui
+
+# Verificar si el daemon está corriendo
+if ! pgrep -f you-tui-daemon > /dev/null 2>&1; then
+    echo "❌ Daemon not running"
+    echo "   Start with: you-tui-daemon"
+    exit 1
+fi
+
+# Obtener playlist y mostrarla formateada
+echo '{"command":"GetStatus"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock 2>/dev/null | \
+python3 -c "
+import sys, json
+
+data = sys.stdin.read()
+data = data.lstrip('\ufeff')
+if not data:
+    print('❌ No response from daemon')
+    sys.exit(1)
+    
+result = json.loads(data)
+d = result.get('Data', {})
+queue = d.get('Queue', [])
+current_idx = d.get('CurrentIndex', 0)
+
+if not queue:
+    print('📋 Playlist is empty')
+    sys.exit(0)
+
+print(f'📋 Playlist ({len(queue)} tracks)')
+print()
+
+total_seconds = 0
+for i, track in enumerate(queue):
+    marker = '▶️' if i == current_idx else '  '
+    num = f'{i+1:2d}.'
+    
+    # Parse duration to seconds for total
+    dur_str = track['Duration']
+    parts = dur_str.split(':')
+    if len(parts) == 2:
+        mins, secs = map(int, parts)
+        total_seconds += mins * 60 + secs
+    
+    print(f'{marker} {num} {track[\"Title\"]}')
+    print(f'      by {track[\"Uploader\"]} - {track[\"Duration\"]}')
+
+# Show total duration
+total_mins = total_seconds // 60
+total_secs = total_seconds % 60
+print()
+print(f'⏱️  Total duration: {total_mins}:{total_secs:02d}')
+"
