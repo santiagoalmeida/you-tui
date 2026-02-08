@@ -1,0 +1,69 @@
+# Custom Dual License
+
+## Non-Commercial Use License
+
+Copyright (c) 2026 Santiago Almeida
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction for **non-commercial purposes only**, including 
+without limitation the rights to use, copy, modify, merge, publish, distribute, 
+sublicense, and to permit persons to whom the Software is furnished to do so, 
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+## Commercial Use License
+
+For **commercial use** of this Software (defined as any use that generates revenue, 
+including but not limited to:
+- Selling the Software or derivative works
+- Using the Software in a commercial product or service
+- Monetizing through advertisements, subscriptions, or any other revenue model
+
+The following terms apply:
+
+1. **Revenue Sharing**: Any party using this Software for commercial purposes must 
+   pay to the copyright holder a minimum of **30% (thirty percent) of gross revenue** 
+   (utilidades brutas) generated directly or indirectly from the use of this Software.
+
+2. **Reporting**: Commercial users must provide quarterly financial reports detailing 
+   gross revenue attributable to the Software.
+
+3. **Commercial License Agreement**: Before any commercial use, parties must contact 
+   the copyright holder to establish a formal commercial licensing agreement.
+
+4. **Contact**: For commercial licensing inquiries, contact the copyright holder at:
+   - GitHub: @santyalmeida (or repository owner)
+
+## Definitions
+
+- **Non-Commercial Use**: Use by individuals or organizations for purposes that do 
+  not generate revenue or commercial advantage.
+
+- **Commercial Use**: Any use of the Software that directly or indirectly generates 
+  revenue, profit, or commercial advantage.
+
+- **Gross Revenue (Utilidades Brutas)**: Total revenue generated before deducting 
+  any expenses, taxes, or costs.
+
+## Enforcement
+
+Violation of these license terms may result in legal action and the requirement 
+to pay damages including but not limited to all revenue generated through 
+unauthorized commercial use, plus legal fees and costs.
+
+---
+
+**Summary**: This software is free for personal and non-commercial use. If you want 
+to make money with it, you must share at least 30% of your gross revenue with the 
+original author.
