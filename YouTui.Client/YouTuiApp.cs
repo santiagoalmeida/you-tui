@@ -17,7 +17,9 @@ public class YouTuiApp
     private int _scrollOffset = 0;
     private DateTime _lastScrollUpdate = DateTime.Now;
     private const int TRACK_NAME_WIDTH = 40; // Width for scrolling track name
-    private const double SCROLL_SPEED = 0.2; // seconds per character
+    private const double SCROLL_SPEED = 0.3; // seconds per character
+    private CancellationTokenSource? _updateCancellation;
+    private Task? _updateTask;
 
     public YouTuiApp()
     {
@@ -184,8 +186,13 @@ public class YouTuiApp
 
     private async Task MainLoopAsync()
     {
+        // Start background update task
+        _updateCancellation = new CancellationTokenSource();
+        _updateTask = Task.Run(async () => await UpdateLoopAsync(_updateCancellation.Token));
+        
         while (_isRunning)
         {
+            // Update status once before showing menu
             _lastStatus = await _daemonClient.GetStatusAsync();
             
             AnsiConsole.Clear();
@@ -199,6 +206,7 @@ public class YouTuiApp
                     {
                         "🔍 Search & Add",
                         "📜 View Playlist",
+                        "📺 Live Player View",
                         "🗑️  Clear Playlist",
                         "⏯️  Pause/Resume",
                         "⏮️  Previous Track",
@@ -215,6 +223,9 @@ public class YouTuiApp
                     break;
                 case "📜 View Playlist":
                     await ViewFullPlaylistAsync();
+                    break;
+                case "📺 Live Player View":
+                    await LivePlayerViewAsync();
                     break;
                 case "🗑️  Clear Playlist":
                     await ClearQueueAsync();
@@ -247,6 +258,35 @@ public class YouTuiApp
                 case "❌ Quit":
                     _isRunning = false;
                     break;
+            }
+        }
+        
+        // Stop update loop
+        _updateCancellation?.Cancel();
+        if (_updateTask != null)
+            await _updateTask;
+    }
+
+    private async Task UpdateLoopAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                // Update scroll offset
+                var now = DateTime.Now;
+                var elapsed = (now - _lastScrollUpdate).TotalSeconds;
+                if (elapsed >= SCROLL_SPEED)
+                {
+                    _scrollOffset++;
+                    _lastScrollUpdate = now;
+                }
+                
+                await Task.Delay(100, cancellationToken); // Update 10 times per second
+            }
+            catch (TaskCanceledException)
+            {
+                break;
             }
         }
     }
@@ -331,15 +371,7 @@ public class YouTuiApp
 
     private Panel CreateSingleLineBanner(Track track, bool isPlaying, double position, double duration)
     {
-        // Update scroll offset for banner effect
-        var now = DateTime.Now;
-        var elapsed = (now - _lastScrollUpdate).TotalSeconds;
-        if (elapsed >= SCROLL_SPEED)
-        {
-            _scrollOffset++;
-            _lastScrollUpdate = now;
-        }
-
+        // Scroll offset is now updated in background task
         var title = track.Title;
         
         // Create scrolling text if title is longer than track name width
@@ -532,6 +564,99 @@ public class YouTuiApp
         }
     }
 
+    private async Task LivePlayerViewAsync()
+    {
+        AnsiConsole.Clear();
+        AnsiConsole.MarkupLine("[cyan]Live Player View[/] - Press any key to return to menu\n");
+        
+        var startTime = DateTime.Now;
+        
+        while (true)
+        {
+            // Check if key is pressed (non-blocking)
+            if (Console.KeyAvailable)
+            {
+                Console.ReadKey(true);
+                break;
+            }
+            
+            // Update status
+            _lastStatus = await _daemonClient.GetStatusAsync();
+            
+            // Clear and redraw
+            Console.SetCursorPosition(0, 2);
+            
+            if (_lastStatus?.CurrentTrack != null)
+            {
+                // Get tracks
+                Track? previousTrack = null;
+                Track? nextTrack = null;
+                
+                if (_lastStatus.Queue != null)
+                {
+                    if (_lastStatus.CurrentIndex > 0)
+                        previousTrack = _lastStatus.Queue[_lastStatus.CurrentIndex - 1];
+                    
+                    if (_lastStatus.CurrentIndex < _lastStatus.Queue.Count - 1)
+                        nextTrack = _lastStatus.Queue[_lastStatus.CurrentIndex + 1];
+                }
+
+                // Previous track
+                if (previousTrack != null)
+                {
+                    var prevTitle = TruncateText(previousTrack.Title, 50);
+                    AnsiConsole.MarkupLine($"[grey dim]  ↑ {prevTitle.EscapeMarkup()}[/]");
+                }
+                else
+                {
+                    AnsiConsole.WriteLine(new string(' ', 60));
+                }
+
+                // Current track with live scroll
+                var title = _lastStatus.CurrentTrack.Title;
+                var displayTitle = CreateScrollingText(title, TRACK_NAME_WIDTH);
+                var positionStr = FormatTime(_lastStatus.TimePosition);
+                var durationStr = _lastStatus.CurrentTrack.Duration;
+                var statusIcon = _lastStatus.IsPlaying ? "♪" : "⏸";
+                
+                var singleLine = $"[cyan]{statusIcon} NOW PLAYING[/] [yellow]-[/] [bold]{displayTitle.EscapeMarkup()}[/] [yellow]-[/] [blue]{positionStr}/{durationStr}[/]";
+                
+                var panel = new Panel(singleLine)
+                {
+                    Border = BoxBorder.Rounded,
+                    BorderStyle = new Style(_lastStatus.IsPlaying ? SpectreColor.Green : SpectreColor.Yellow),
+                    Padding = new Padding(1, 0)
+                };
+                
+                AnsiConsole.Write(panel);
+
+                // Next track
+                if (nextTrack != null)
+                {
+                    var nextTitle = TruncateText(nextTrack.Title, 50);
+                    AnsiConsole.MarkupLine($"[grey dim]  ↓ {nextTitle.EscapeMarkup()}[/]");
+                }
+                else
+                {
+                    AnsiConsole.WriteLine(new string(' ', 60));
+                }
+                
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine($"[cyan]📋 Queue: {_lastStatus.PendingCount} pending, {_lastStatus.QueueLength} total[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[grey]♪ Nothing playing[/]");
+            }
+            
+            // Clear rest of screen
+            for (int i = 0; i < 5; i++)
+                AnsiConsole.WriteLine(new string(' ', 80));
+            
+            await Task.Delay(500); // Update twice per second
+        }
+    }
+
     private async Task ClearQueueAsync()
     {
         var confirm = AnsiConsole.Confirm("[yellow]Clear entire playlist?[/]");
@@ -544,6 +669,10 @@ public class YouTuiApp
 
     private async Task CleanupAsync()
     {
+        _updateCancellation?.Cancel();
+        if (_updateTask != null)
+            await _updateTask;
+        
         AnsiConsole.Clear();
         AnsiConsole.MarkupLine("[cyan]Goodbye![/]");
         _daemonClient.Dispose();
