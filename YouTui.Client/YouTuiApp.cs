@@ -304,9 +304,6 @@ public class YouTuiApp
             AnsiConsole.MarkupLine("[grey]s:Search | p:Playlist | l:Live View | c:Clear | space:Pause/Play | n:Next | b:Previous | q:Quit[/]\n");
         }
     }
-            AnsiConsole.MarkupLine("[grey]s:Search | p:Playlist | l:Live View | c:Clear | space:Pause/Play | n:Next | b:Previous | q:Quit[/]\n");
-        }
-    }
 
     private async Task UpdateLoopAsync(CancellationToken cancellationToken)
     {
