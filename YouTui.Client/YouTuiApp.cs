@@ -451,25 +451,10 @@ public class YouTuiApp
             return;
         }
 
-        var table = new Table();
-        table.AddColumn(new TableColumn("#").Width(4));
-        table.AddColumn("Title");
-        table.AddColumn(new TableColumn("Duration").Width(10));
-        table.AddColumn(new TableColumn("Uploader").Width(25));
-
-        for (int i = 0; i < results.Count; i++)
-        {
-            var track = results[i];
-            table.AddRow(
-                $"[grey]{i}[/]",
-                track.Title.EscapeMarkup(),
-                $"[blue]{track.Duration}[/]",
-                track.Uploader.EscapeMarkup()
-            );
-        }
-
-        AnsiConsole.Write(table);
-        AnsiConsole.MarkupLine("\n[grey]Select tracks with TAB, Enter to add[/]");
+        // Direct to fzf selector without showing table
+        AnsiConsole.MarkupLine($"[green]✓ Found {results.Count} results[/]");
+        AnsiConsole.MarkupLine("[grey]Opening selector... (TAB to select multiple, Enter to add)[/]");
+        await Task.Delay(500);
 
         var selected = await _selector.SelectMultipleAsync(results);
 
