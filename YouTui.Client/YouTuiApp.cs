@@ -433,8 +433,17 @@ public class YouTuiApp
 
     private async Task SearchAndAddAsync()
     {
-        var query = AnsiConsole.Ask<string>("[cyan]🔍 Search YouTube:[/]");
-        if (string.IsNullOrWhiteSpace(query)) return;
+        var query = AnsiConsole.Prompt(
+            new TextPrompt<string>("[cyan]🔍 Search YouTube:[/]")
+                .AllowEmpty()
+        );
+        
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            AnsiConsole.MarkupLine("[grey]Search cancelled[/]");
+            await Task.Delay(800);
+            return;
+        }
 
         List<Track> results = new();
         await AnsiConsole.Status()
