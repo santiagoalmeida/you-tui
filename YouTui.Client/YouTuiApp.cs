@@ -304,6 +304,8 @@ public class YouTuiApp
                 break;
             case 'q':
                 _inSubScreen = true;
+                await Task.Delay(100); // Wait for update loop to pause
+                AnsiConsole.Clear();
                 var confirm = AnsiConsole.Confirm("[yellow]Quit you-tui?[/]");
                 if (confirm)
                     _isRunning = false;
@@ -314,9 +316,11 @@ public class YouTuiApp
         // Redraw after action (only if not in subscreen)
         if (_isRunning && !_inSubScreen)
         {
+            _lastStatus = await _daemonClient.GetStatusAsync();
             AnsiConsole.Clear();
             AnsiConsole.MarkupLine("[cyan]you-tui - Keyboard Controls:[/]");
             AnsiConsole.MarkupLine("[grey]s:Search | p:Playlist | l:Live View | c:Clear | space:Pause/Play | n:Next | b:Previous | q:Quit[/]\n");
+            ShowCompactStatus();
         }
     }
 
@@ -548,11 +552,11 @@ public class YouTuiApp
 
     private async Task ViewFullPlaylistAsync()
     {
-        // Screen already cleared in HandleKeyPressAsync
         var status = await _daemonClient.GetStatusAsync();
         
         if (status == null || status.QueueLength == 0)
         {
+            AnsiConsole.Clear();
             AnsiConsole.MarkupLine("[yellow]Playlist is empty[/]");
             AnsiConsole.MarkupLine("\n[grey]Press any key to continue...[/]");
             Console.ReadKey(true);
@@ -572,6 +576,7 @@ public class YouTuiApp
             choices.Add($"{prefix}[[{i}]] {title} - {uploader} ({track.Duration})");
         }
 
+        AnsiConsole.Clear();
         var selected = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title($"[cyan]═══ Playlist ({status.QueueLength} tracks) ═══[/]")
