@@ -59,6 +59,62 @@ case "$COMMAND" in
         exec you-tui-playlist
         ;;
     
+    play)
+        if ! systemctl --user is-active --quiet you-tui-daemon; then
+            echo "❌ Daemon is not running. Start it with: you-tui start"
+            exit 1
+        fi
+        echo '{"command":"Play"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo "▶️  Playing"
+        else
+            echo "❌ Failed to send play command"
+            exit 1
+        fi
+        ;;
+    
+    pause)
+        if ! systemctl --user is-active --quiet you-tui-daemon; then
+            echo "❌ Daemon is not running. Start it with: you-tui start"
+            exit 1
+        fi
+        echo '{"command":"Pause"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo "⏸️  Paused"
+        else
+            echo "❌ Failed to send pause command"
+            exit 1
+        fi
+        ;;
+    
+    next)
+        if ! systemctl --user is-active --quiet you-tui-daemon; then
+            echo "❌ Daemon is not running. Start it with: you-tui start"
+            exit 1
+        fi
+        echo '{"command":"Next"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo "⏭️  Next track"
+        else
+            echo "❌ Failed to send next command"
+            exit 1
+        fi
+        ;;
+    
+    prev|previous|back)
+        if ! systemctl --user is-active --quiet you-tui-daemon; then
+            echo "❌ Daemon is not running. Start it with: you-tui start"
+            exit 1
+        fi
+        echo '{"command":"Previous"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo "⏮️  Previous track"
+        else
+            echo "❌ Failed to send previous command"
+            exit 1
+        fi
+        ;;
+    
     help|--help|-h)
         cat << 'EOF'
 you-tui - YouTube Terminal Music Player
@@ -68,9 +124,19 @@ Usage:
 
 Commands:
   (none)        Launch interactive client
+  
+Daemon Control:
   start         Start the daemon
   stop          Stop the daemon
   restart       Restart the daemon
+  
+Playback Control:
+  play          Resume playback
+  pause         Pause playback
+  next          Skip to next track
+  prev          Go to previous track
+  
+Information:
   status        Show current playback status
   playlist      Show current playlist
   help          Show this help message
@@ -79,6 +145,7 @@ Examples:
   you-tui              # Launch interactive client
   you-tui start        # Start daemon
   you-tui status       # Show what's playing
+  you-tui next         # Skip to next track
   you-tui playlist     # Show playlist
 
 For more information, visit: https://github.com/santiagoalmeida/you-tui
