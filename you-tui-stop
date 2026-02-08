@@ -1,0 +1,19 @@
+#!/bin/bash
+# Detener daemon you-tui
+
+if ! systemctl --user is-active --quiet you-tui-daemon; then
+    echo "⚠️  Daemon is not running"
+    exit 0
+fi
+
+echo "⏹️  Stopping you-tui daemon..."
+systemctl --user stop you-tui-daemon
+
+sleep 1
+
+if systemctl --user is-active --quiet you-tui-daemon; then
+    echo "❌ Failed to stop daemon"
+    exit 1
+else
+    echo "✅ Daemon stopped successfully"
+fi

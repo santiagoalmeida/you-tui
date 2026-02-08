@@ -1,0 +1,17 @@
+#!/bin/bash
+# Iniciar daemon you-tui
+
+echo "🚀 Starting you-tui daemon..."
+systemctl --user start you-tui-daemon
+
+sleep 1
+
+if systemctl --user is-active --quiet you-tui-daemon; then
+    echo "✅ Daemon started successfully"
+    PID=$(pgrep -f you-tui-daemon 2>/dev/null)
+    echo "   PID: $PID"
+else
+    echo "❌ Failed to start daemon"
+    systemctl --user status you-tui-daemon
+    exit 1
+fi

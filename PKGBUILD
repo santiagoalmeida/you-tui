@@ -72,6 +72,7 @@ package() {
     
     # Install auxiliary scripts
     install -Dm755 you-tui-status "$pkgdir/usr/bin/you-tui-status"
+    install -Dm755 you-tui-playlist "$pkgdir/usr/bin/you-tui-playlist"
     
     # Documentation
     install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
