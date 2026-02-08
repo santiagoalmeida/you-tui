@@ -32,7 +32,19 @@ if track:
     playing = '▶️ ' if d.get('IsPlaying') else '⏸️ '
     print(f'🎵 {playing}Now Playing:')
     print(f'   {track[\"Title\"]}')
-    print(f'   by {track[\"Uploader\"]} ({track[\"Duration\"]})')
+    print(f'   by {track[\"Uploader\"]}')
+    
+    # Time progress
+    pos = int(d.get('TimePosition', 0))
+    dur = int(d.get('Duration', 0))
+    if dur > 0:
+        pos_str = f'{pos//60}:{pos%60:02d}'
+        dur_str = f'{dur//60}:{dur%60:02d}'
+        percent = int((pos / dur) * 100)
+        bar_width = 30
+        filled = int((pos / dur) * bar_width)
+        bar = '█' * filled + '░' * (bar_width - filled)
+        print(f'   {pos_str} [{bar}] {dur_str} ({percent}%)')
 else:
     print('🎵 Nothing playing')
 
