@@ -347,7 +347,8 @@ public class YouTuiApp
             {
                 Border = BoxBorder.Rounded,
                 BorderStyle = new Style(SpectreColor.Grey),
-                Padding = new Padding(1, 0)
+                Padding = new Padding(1, 0),
+                Width = 80  // Fixed width
             };
             AnsiConsole.Write(emptyPanel);
         }
@@ -391,7 +392,8 @@ public class YouTuiApp
         {
             Border = BoxBorder.Rounded,
             BorderStyle = new Style(isPlaying ? SpectreColor.Green : SpectreColor.Yellow),
-            Padding = new Padding(1, 0)
+            Padding = new Padding(1, 0),
+            Width = 80  // Fixed width
         };
         
         return panel;
@@ -610,7 +612,8 @@ public class YouTuiApp
                 {
                     Border = BoxBorder.Rounded,
                     BorderStyle = new Style(_lastStatus.IsPlaying ? SpectreColor.Green : SpectreColor.Yellow),
-                    Padding = new Padding(1, 0)
+                    Padding = new Padding(1, 0),
+                    Width = 80  // Fixed width
                 };
                 
                 AnsiConsole.Write(panel);
