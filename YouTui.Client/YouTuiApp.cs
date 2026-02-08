@@ -195,30 +195,57 @@ public class YouTuiApp
         AnsiConsole.MarkupLine("[cyan]you-tui - Keyboard Controls:[/]");
         AnsiConsole.MarkupLine("[grey]s:Search | p:Playlist | l:Live View | c:Clear | space:Pause/Play | n:Next | b:Previous | q:Quit[/]\n");
         
+        // Use a task for keyboard reading
+        var keyboardTask = Task.Run(async () => 
+        {
+            while (_isRunning)
+            {
+                try
+                {
+                    if (Console.KeyAvailable)
+                    {
+                        var key = Console.ReadKey(true);
+                        await HandleKeyPressAsync(key.KeyChar);
+                    }
+                    await Task.Delay(100);
+                }
+                catch
+                {
+                    // Ignore keyboard errors
+                }
+            }
+        });
+        
         while (_isRunning)
         {
-            // Update status from daemon
-            _lastStatus = await _daemonClient.GetStatusAsync();
-            
-            // Redraw screen
-            Console.SetCursorPosition(0, 3);
-            ShowCompactStatus();
-            
-            // Check for keyboard input (non-blocking)
-            if (Console.KeyAvailable)
+            try
             {
-                var key = Console.ReadKey(true);
-                await HandleKeyPressAsync(key.KeyChar);
+                // Update status from daemon
+                _lastStatus = await _daemonClient.GetStatusAsync();
+                
+                // Redraw screen
+                Console.SetCursorPosition(0, 3);
+                ShowCompactStatus();
+                
+                // Clear extra lines
+                for (int i = 0; i < 5; i++)
+                    Console.WriteLine(new string(' ', 80));
+                
+                // Wait 1 second before next update
+                await Task.Delay(1000);
             }
-            
-            // Wait 1 second before next update
-            await Task.Delay(1000);
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
+                await Task.Delay(2000);
+            }
         }
         
         // Stop update loop
         _updateCancellation?.Cancel();
         if (_updateTask != null)
             await _updateTask;
+        await keyboardTask;
     }
 
     private async Task HandleKeyPressAsync(char keyChar)
