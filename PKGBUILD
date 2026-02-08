@@ -1,7 +1,7 @@
 # Maintainer: Santiago Almeida <santyalmeida@gmail.com>
 pkgname=you-tui
 pkgver=0.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="YouTube Terminal Music Player with daemon/client architecture"
 arch=('x86_64')
 url="https://github.com/santiagoalmeida/you-tui"

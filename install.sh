@@ -23,7 +23,9 @@ dotnet build -c Release
 # Copy binaries
 sudo mkdir -p /usr/local/bin
 sudo cp YouTui.Daemon/bin/Release/net10.0/you-tui-daemon /usr/local/bin/
+sudo cp YouTui.Daemon/bin/Release/net10.0/you-tui-daemon.dll /usr/local/bin/
 sudo cp YouTui.Client/bin/Release/net10.0/you-tui /usr/local/bin/
+sudo cp YouTui.Client/bin/Release/net10.0/you-tui.dll /usr/local/bin/
 sudo chmod +x /usr/local/bin/you-tui-daemon
 sudo chmod +x /usr/local/bin/you-tui
 

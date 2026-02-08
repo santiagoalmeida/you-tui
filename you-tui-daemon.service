@@ -10,8 +10,7 @@ RestartSec=5s
 StandardOutput=journal
 StandardError=journal
 
-# Run as the user who enabled the service
-User=%i
+# Run as the user who enabled the service (not needed for user services)
 
 [Install]
 WantedBy=default.target
