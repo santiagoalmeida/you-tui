@@ -10,7 +10,7 @@ depends=('mpv' 'yt-dlp' 'fzf' 'socat')
 makedepends=('dotnet-sdk>=10.0')
 install=you-tui.install
 source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('dfd9020bd60c2d8ef1ab10bcf9eae22e545c8baf521d6829ada26d7991168279')
 
 build() {
     cd "$srcdir/$pkgname-$pkgver"
