@@ -39,16 +39,41 @@ A terminal-based music player for YouTube with daemon/client architecture.
 
 ## Installation
 
-### Dependencies
+### Arch Linux (AUR)
+
+**Recommended:** Install from AUR using your favorite AUR helper:
 
 ```bash
-# Install required tools
-sudo apt install mpv yt-dlp fzf socat
+# Using yay
+yay -S you-tui
 
-# Install .NET 10 SDK (if not installed)
+# Using paru
+paru -S you-tui
+
+# Manual installation from AUR
+git clone https://aur.archlinux.org/you-tui.git
+cd you-tui
+makepkg -si
 ```
 
-### Build
+The package automatically installs all dependencies (mpv, yt-dlp, fzf, socat) and includes the .NET runtime, so you don't need to install .NET separately.
+
+### From Source (Other Distributions)
+
+#### Dependencies
+
+```bash
+# Debian/Ubuntu
+sudo apt install mpv yt-dlp fzf socat
+
+# Arch Linux (if not using AUR)
+sudo pacman -S mpv yt-dlp fzf socat
+
+# Install .NET 10 SDK (required for building)
+# Visit: https://dotnet.microsoft.com/download
+```
+
+#### Build
 
 ```bash
 # Build the project

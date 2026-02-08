@@ -7,3 +7,10 @@ obj/
 *.swp
 *~
 .DS_Store
+
+# AUR package building
+*.pkg.tar.zst
+*.pkg.tar.zst.sig
+*.tar.gz
+pkg/
+src/

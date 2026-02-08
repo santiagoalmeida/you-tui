@@ -5,7 +5,19 @@ set -e
 
 echo "Installing you-tui daemon..."
 
+# Check if dotnet is installed
+if ! command -v dotnet &> /dev/null; then
+    echo "Error: dotnet CLI not found. Please install .NET SDK first."
+    echo "Visit: https://dotnet.microsoft.com/download"
+    exit 1
+fi
+
+# Restore NuGet dependencies
+echo "Restoring NuGet dependencies..."
+dotnet restore
+
 # Build in release mode
+echo "Building in release mode..."
 dotnet build -c Release
 
 # Copy binaries
