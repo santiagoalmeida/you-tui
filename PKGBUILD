@@ -1,7 +1,7 @@
 # Maintainer: Santiago Almeida <santyalmeida@gmail.com>
 pkgname=you-tui
 pkgver=0.1.0
-pkgrel=2
+pkgrel=3
 pkgdesc="YouTube Terminal Music Player with daemon/client architecture"
 arch=('x86_64')
 url="https://github.com/santiagoalmeida/you-tui"
@@ -49,7 +49,7 @@ package() {
     done
     
     # Install client binary and runtime files
-    install -Dm755 build/client/you-tui "$pkgdir/usr/lib/$pkgname/you-tui"
+    install -Dm755 build/client/you-tui "$pkgdir/usr/lib/$pkgname/you-tui-client"
     
     # Copy client runtime libraries
     for file in build/client/*.{dll,so,json}; do
@@ -62,9 +62,8 @@ package() {
     echo 'exec /usr/lib/you-tui/you-tui-daemon "$@"' >> "$pkgdir/usr/bin/you-tui-daemon"
     chmod 755 "$pkgdir/usr/bin/you-tui-daemon"
     
-    echo '#!/bin/bash' > "$pkgdir/usr/bin/you-tui"
-    echo 'exec /usr/lib/you-tui/you-tui "$@"' >> "$pkgdir/usr/bin/you-tui"
-    chmod 755 "$pkgdir/usr/bin/you-tui"
+    # Install main you-tui wrapper with subcommands
+    install -Dm755 you-tui "$pkgdir/usr/bin/you-tui"
     
     # Install systemd service
     install -Dm644 you-tui-daemon.service \

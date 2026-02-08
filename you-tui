@@ -1,0 +1,92 @@
+#!/bin/bash
+# you-tui - YouTube Terminal Music Player
+# Main command with subcommands
+
+COMMAND="${1:-}"
+
+case "$COMMAND" in
+    start)
+        echo "🚀 Starting you-tui daemon..."
+        systemctl --user start you-tui-daemon
+        sleep 1
+        if systemctl --user is-active --quiet you-tui-daemon; then
+            echo "✅ Daemon started successfully"
+            PID=$(pgrep -f you-tui-daemon 2>/dev/null)
+            echo "   PID: $PID"
+        else
+            echo "❌ Failed to start daemon"
+            systemctl --user status you-tui-daemon
+            exit 1
+        fi
+        ;;
+    
+    stop)
+        if ! systemctl --user is-active --quiet you-tui-daemon; then
+            echo "⚠️  Daemon is not running"
+            exit 0
+        fi
+        echo "⏹️  Stopping you-tui daemon..."
+        systemctl --user stop you-tui-daemon
+        sleep 1
+        if systemctl --user is-active --quiet you-tui-daemon; then
+            echo "❌ Failed to stop daemon"
+            exit 1
+        else
+            echo "✅ Daemon stopped successfully"
+        fi
+        ;;
+    
+    restart)
+        echo "🔄 Restarting you-tui daemon..."
+        systemctl --user restart you-tui-daemon
+        sleep 1
+        if systemctl --user is-active --quiet you-tui-daemon; then
+            echo "✅ Daemon restarted successfully"
+            PID=$(pgrep -f you-tui-daemon 2>/dev/null)
+            echo "   PID: $PID"
+        else
+            echo "❌ Failed to restart daemon"
+            systemctl --user status you-tui-daemon
+            exit 1
+        fi
+        ;;
+    
+    status)
+        exec you-tui-status
+        ;;
+    
+    playlist)
+        exec you-tui-playlist
+        ;;
+    
+    help|--help|-h)
+        cat << 'EOF'
+you-tui - YouTube Terminal Music Player
+
+Usage:
+  you-tui [command]
+
+Commands:
+  (none)        Launch interactive client
+  start         Start the daemon
+  stop          Stop the daemon
+  restart       Restart the daemon
+  status        Show current playback status
+  playlist      Show current playlist
+  help          Show this help message
+
+Examples:
+  you-tui              # Launch interactive client
+  you-tui start        # Start daemon
+  you-tui status       # Show what's playing
+  you-tui playlist     # Show playlist
+
+For more information, visit: https://github.com/santiagoalmeida/you-tui
+EOF
+        ;;
+    
+    *)
+        # No command or unknown command - launch client
+        exec /usr/local/bin/you-tui-client "$@"
+        ;;
+esac
