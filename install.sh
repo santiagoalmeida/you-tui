@@ -30,7 +30,8 @@ sudo chmod +x /usr/local/bin/you-tui-daemon
 sudo chmod +x /usr/local/bin/you-tui
 
 # Copy shared libraries
-sudo cp YouTui.Shared/bin/Release/net10.0/YouTui.Shared.dll /usr/local/bin/
+sudo cp YouTui.Daemon/bin/Release/net10.0/*.dll /usr/local/bin/ 2>/dev/null || true
+sudo cp YouTui.Client/bin/Release/net10.0/*.dll /usr/local/bin/ 2>/dev/null || true
 sudo cp YouTui.Daemon/bin/Release/net10.0/*.deps.json /usr/local/bin/ 2>/dev/null || true
 sudo cp YouTui.Daemon/bin/Release/net10.0/*.runtimeconfig.json /usr/local/bin/ 2>/dev/null || true
 sudo cp YouTui.Client/bin/Release/net10.0/*.deps.json /usr/local/bin/ 2>/dev/null || true
