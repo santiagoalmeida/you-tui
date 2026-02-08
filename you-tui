@@ -115,6 +115,73 @@ case "$COMMAND" in
         fi
         ;;
     
+    search)
+        shift
+        QUERY="$*"
+        if [ -z "$QUERY" ]; then
+            echo "Usage: you-tui search <query>"
+            echo "Example: you-tui search toto africa"
+            exit 1
+        fi
+        
+        echo "🔍 Searching for: $QUERY"
+        echo ""
+        
+        yt-dlp --no-warnings -J --flat-playlist "ytsearch10:$QUERY" 2>/dev/null | \
+        python3 -c "
+import sys, json
+
+try:
+    data = json.load(sys.stdin)
+    entries = data.get('entries', [])
+    
+    if not entries:
+        print('❌ No results found')
+        sys.exit(1)
+    
+    print(f'Found {len(entries)} results:\n')
+    
+    for i, entry in enumerate(entries, 1):
+        title = entry.get('title', 'Unknown')
+        channel = entry.get('channel', entry.get('uploader', 'Unknown'))
+        duration = entry.get('duration', 0)
+        video_id = entry.get('id', '')
+        
+        # Format duration
+        if duration:
+            mins = int(duration // 60)
+            secs = int(duration % 60)
+            dur_str = f'{mins:02d}:{secs:02d}'
+        else:
+            dur_str = 'Unknown'
+        
+        print(f'{i:2d}. {title}')
+        print(f'    by {channel} - {dur_str}')
+        print(f'    https://www.youtube.com/watch?v={video_id}')
+        print()
+except Exception as e:
+    print(f'❌ Error: {e}', file=sys.stderr)
+    sys.exit(1)
+"
+        ;;
+    
+    clear)
+        if ! systemctl --user is-active --quiet you-tui-daemon; then
+            echo "❌ Daemon is not running. Start it with: you-tui start"
+            exit 1
+        fi
+        
+        echo "🗑️  Clearing playlist..."
+        echo '{"command":"ClearQueue"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock > /dev/null 2>&1
+        
+        if [ $? -eq 0 ]; then
+            echo "✅ Playlist cleared"
+        else
+            echo "❌ Failed to clear playlist"
+            exit 1
+        fi
+        ;;
+    
     help|--help|-h)
         cat << 'EOF'
 you-tui - YouTube Terminal Music Player
@@ -136,17 +203,22 @@ Playback Control:
   next          Skip to next track
   prev          Go to previous track
   
+Playlist Management:
+  search <q>    Search for songs on YouTube
+  clear         Clear the playlist
+  
 Information:
   status        Show current playback status
   playlist      Show current playlist
   help          Show this help message
 
 Examples:
-  you-tui              # Launch interactive client
-  you-tui start        # Start daemon
-  you-tui status       # Show what's playing
-  you-tui next         # Skip to next track
-  you-tui playlist     # Show playlist
+  you-tui                      # Launch interactive client
+  you-tui start                # Start daemon
+  you-tui search toto africa   # Search for songs
+  you-tui status               # Show what's playing
+  you-tui next                 # Skip to next track
+  you-tui clear                # Clear playlist
 
 For more information, visit: https://github.com/santiagoalmeida/you-tui
 EOF
