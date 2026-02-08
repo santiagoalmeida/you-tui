@@ -108,16 +108,26 @@ public class MpvPlayer : IDisposable
         try
         {
             using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+            socket.ReceiveTimeout = 2000; // 2 seconds timeout
             await socket.ConnectAsync(_endpoint);
 
             var json = JsonSerializer.Serialize(command) + "\n";
             var bytes = Encoding.UTF8.GetBytes(json);
             await socket.SendAsync(bytes, SocketFlags.None);
 
-            // Read response
+            // Read response with timeout
             var buffer = new byte[4096];
+            var sb = new StringBuilder();
+            
+            await Task.Delay(100); // Give MPV time to respond
+            
             var received = await socket.ReceiveAsync(buffer, SocketFlags.None);
-            return Encoding.UTF8.GetString(buffer, 0, received);
+            if (received > 0)
+            {
+                sb.Append(Encoding.UTF8.GetString(buffer, 0, received));
+            }
+            
+            return sb.ToString();
         }
         catch (Exception)
         {
@@ -131,15 +141,20 @@ public class MpvPlayer : IDisposable
         {
             var response = await SendCommandWithResponseAsync(new
             {
-                command = new[] { "get_property", "time-pos" }
+                command = new[] { "get_property", "time-pos" },
+                request_id = 1
             });
 
-            if (response != null && response.Contains("data"))
+            if (response != null)
             {
-                var match = System.Text.RegularExpressions.Regex.Match(response, @"""data"":\s*([0-9.]+)");
-                if (match.Success && double.TryParse(match.Groups[1].Value, out var pos))
+                // Try to parse JSON response
+                using var doc = JsonDocument.Parse(response);
+                if (doc.RootElement.TryGetProperty("data", out var dataElement))
                 {
-                    return pos;
+                    if (dataElement.ValueKind == JsonValueKind.Number)
+                    {
+                        return dataElement.GetDouble();
+                    }
                 }
             }
         }
@@ -153,15 +168,20 @@ public class MpvPlayer : IDisposable
         {
             var response = await SendCommandWithResponseAsync(new
             {
-                command = new[] { "get_property", "duration" }
+                command = new[] { "get_property", "duration" },
+                request_id = 2
             });
 
-            if (response != null && response.Contains("data"))
+            if (response != null)
             {
-                var match = System.Text.RegularExpressions.Regex.Match(response, @"""data"":\s*([0-9.]+)");
-                if (match.Success && double.TryParse(match.Groups[1].Value, out var dur))
+                // Try to parse JSON response
+                using var doc = JsonDocument.Parse(response);
+                if (doc.RootElement.TryGetProperty("data", out var dataElement))
                 {
-                    return dur;
+                    if (dataElement.ValueKind == JsonValueKind.Number)
+                    {
+                        return dataElement.GetDouble();
+                    }
                 }
             }
         }

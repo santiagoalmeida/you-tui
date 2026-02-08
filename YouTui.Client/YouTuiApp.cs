@@ -16,8 +16,8 @@ public class YouTuiApp
     private DaemonStatus? _lastStatus;
     private int _scrollOffset = 0;
     private DateTime _lastScrollUpdate = DateTime.Now;
-    private const int BANNER_WIDTH = 50;
-    private const double SCROLL_SPEED = 0.3; // seconds per character
+    private const int BANNER_WIDTH = 60;
+    private const double SCROLL_SPEED = 0.15; // seconds per character (faster)
 
     public YouTuiApp()
     {
@@ -305,9 +305,9 @@ public class YouTuiApp
         {
             var emptyPanel = new Panel("[grey]♪ Nothing playing[/]")
             {
-                Border = BoxBorder.Double,
+                Border = BoxBorder.Rounded,
                 BorderStyle = new Style(SpectreColor.Grey),
-                Padding = new Padding(2, 1)
+                Padding = new Padding(1, 0)
             };
             AnsiConsole.Write(emptyPanel);
         }
@@ -365,9 +365,9 @@ public class YouTuiApp
         
         var panel = new Panel(content.ToString())
         {
-            Border = BoxBorder.Double,
+            Border = BoxBorder.Rounded,
             BorderStyle = new Style(isPlaying ? SpectreColor.Green : SpectreColor.Yellow),
-            Padding = new Padding(2, 1)
+            Padding = new Padding(1, 0)
         };
         
         return panel;
