@@ -16,8 +16,8 @@ public class YouTuiApp
     private DaemonStatus? _lastStatus;
     private int _scrollOffset = 0;
     private DateTime _lastScrollUpdate = DateTime.Now;
-    private const int BANNER_WIDTH = 60;
-    private const double SCROLL_SPEED = 0.15; // seconds per character (faster)
+    private const int TRACK_NAME_WIDTH = 40; // Width for scrolling track name
+    private const double SCROLL_SPEED = 0.2; // seconds per character
 
     public YouTuiApp()
     {
@@ -278,7 +278,7 @@ public class YouTuiApp
             // Show previous track (dimmed/opaque)
             if (previousTrack != null)
             {
-                var prevTitle = TruncateText(previousTrack.Title.EscapeMarkup(), BANNER_WIDTH);
+                var prevTitle = TruncateText(previousTrack.Title.EscapeMarkup(), 50);
                 AnsiConsole.MarkupLine($"[grey dim]  ↑ {prevTitle}[/]");
             }
             else
@@ -286,14 +286,14 @@ public class YouTuiApp
                 AnsiConsole.WriteLine();
             }
 
-            // Current track box with banner rotator effect
-            var boxContent = CreateBannerBox(_lastStatus.CurrentTrack, _lastStatus.IsPlaying, _lastStatus.TimePosition, _lastStatus.Duration);
+            // Current track box with banner rotator effect (single line)
+            var boxContent = CreateSingleLineBanner(_lastStatus.CurrentTrack, _lastStatus.IsPlaying, _lastStatus.TimePosition, _lastStatus.Duration);
             AnsiConsole.Write(boxContent);
 
             // Show next track (dimmed/opaque)
             if (nextTrack != null)
             {
-                var nextTitle = TruncateText(nextTrack.Title.EscapeMarkup(), BANNER_WIDTH);
+                var nextTitle = TruncateText(nextTrack.Title.EscapeMarkup(), 50);
                 AnsiConsole.MarkupLine($"[grey dim]  ↓ {nextTitle}[/]");
             }
             else
@@ -329,7 +329,7 @@ public class YouTuiApp
         AnsiConsole.WriteLine();
     }
 
-    private Panel CreateBannerBox(Track track, bool isPlaying, double position, double duration)
+    private Panel CreateSingleLineBanner(Track track, bool isPlaying, double position, double duration)
     {
         // Update scroll offset for banner effect
         var now = DateTime.Now;
@@ -341,29 +341,21 @@ public class YouTuiApp
         }
 
         var title = track.Title;
-        var uploader = track.Uploader;
         
-        // Create scrolling text if title is longer than banner width
-        var displayTitle = CreateScrollingText(title, BANNER_WIDTH);
+        // Create scrolling text if title is longer than track name width
+        var displayTitle = CreateScrollingText(title, TRACK_NAME_WIDTH);
         
         // Format time display
         var positionStr = FormatTime(position);
         var durationStr = track.Duration;
-        var timeDisplay = $"{positionStr} / {durationStr}";
         
         // Status icon
         var statusIcon = isPlaying ? "♪" : "⏸";
         
-        // Build content
-        var content = new StringBuilder();
-        content.AppendLine($"[bold cyan]{statusIcon} NOW PLAYING[/]");
-        content.AppendLine();
-        content.AppendLine($"[bold yellow]{displayTitle.EscapeMarkup()}[/]");
-        content.AppendLine($"[grey]by {uploader.EscapeMarkup()}[/]");
-        content.AppendLine();
-        content.Append($"[blue]{timeDisplay}[/]");
+        // Build single line: "NOW PLAYING - [scrolling track name] - 1:33/4:38"
+        var singleLine = $"[cyan]{statusIcon} NOW PLAYING[/] [yellow]-[/] [bold]{displayTitle.EscapeMarkup()}[/] [yellow]-[/] [blue]{positionStr}/{durationStr}[/]";
         
-        var panel = new Panel(content.ToString())
+        var panel = new Panel(singleLine)
         {
             Border = BoxBorder.Rounded,
             BorderStyle = new Style(isPlaying ? SpectreColor.Green : SpectreColor.Yellow),
