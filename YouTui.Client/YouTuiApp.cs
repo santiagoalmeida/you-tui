@@ -16,7 +16,7 @@ public class YouTuiApp
     private DaemonStatus? _lastStatus;
     private int _scrollOffset = 0;
     private DateTime _lastScrollUpdate = DateTime.Now;
-    private const int TRACK_NAME_WIDTH = 40; // Width for scrolling track name
+    private const int TRACK_NAME_WIDTH = 25; // Width for scrolling track name (adjusted for 64-char panel)
     private const double SCROLL_SPEED = 0.3; // seconds per character
     private CancellationTokenSource? _updateCancellation;
     private Task? _updateTask;
@@ -348,7 +348,7 @@ public class YouTuiApp
                 Border = BoxBorder.Rounded,
                 BorderStyle = new Style(SpectreColor.Grey),
                 Padding = new Padding(1, 0),
-                Width = 80  // Fixed width
+                Width = 64  // Fixed width (20% less than 80)
             };
             AnsiConsole.Write(emptyPanel);
         }
@@ -613,7 +613,7 @@ public class YouTuiApp
                     Border = BoxBorder.Rounded,
                     BorderStyle = new Style(_lastStatus.IsPlaying ? SpectreColor.Green : SpectreColor.Yellow),
                     Padding = new Padding(1, 0),
-                    Width = 80  // Fixed width
+                    Width = 64  // Fixed width (20% less than 80)
                 };
                 
                 AnsiConsole.Write(panel);
