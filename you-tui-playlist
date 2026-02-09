@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ver playlist del daemon you-tui
+# Ver playlist del daemon you-tui con interfaz interactiva
 
 # Verificar si el daemon está corriendo
 if ! pgrep -f you-tui-daemon > /dev/null 2>&1; then
@@ -8,47 +8,129 @@ if ! pgrep -f you-tui-daemon > /dev/null 2>&1; then
     exit 1
 fi
 
-# Obtener playlist y mostrarla formateada
-echo '{"command":"GetStatus"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock 2>/dev/null | \
-python3 -c "
+# Obtener playlist
+STATUS=$(echo '{"command":"GetStatus"}' | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock 2>/dev/null)
+
+if [ -z "$STATUS" ]; then
+    echo "❌ No response from daemon"
+    exit 1
+fi
+
+# Parse and display with fzf
+echo "$STATUS" | python3 -c "
 import sys, json
 
-data = sys.stdin.read()
-data = data.lstrip('\ufeff')
-if not data:
-    print('❌ No response from daemon')
-    sys.exit(1)
-    
+data = sys.stdin.read().lstrip('\ufeff')
 result = json.loads(data)
 d = result.get('Data', {})
 queue = d.get('Queue', [])
 current_idx = d.get('CurrentIndex', 0)
+is_playing = d.get('IsPlaying', False)
 
 if not queue:
-    print('📋 Playlist is empty')
-    sys.exit(0)
+    print('📋 Playlist is empty', file=sys.stderr)
+    sys.exit(1)
 
-print(f'📋 Playlist ({len(queue)} tracks)')
-print()
-
+# Calculate total duration
 total_seconds = 0
-for i, track in enumerate(queue):
-    marker = '▶️' if i == current_idx else '  '
-    num = f'{i+1:2d}.'
-    
-    # Parse duration to seconds for total
+for track in queue:
     dur_str = track['Duration']
     parts = dur_str.split(':')
     if len(parts) == 2:
-        mins, secs = map(int, parts)
+        mins, secs = int(parts[0]), int(parts[1])
         total_seconds += mins * 60 + secs
-    
-    print(f'{marker} {num} {track[\"Title\"]}')
-    print(f'      by {track[\"Uploader\"]} - {track[\"Duration\"]}')
 
-# Show total duration
 total_mins = total_seconds // 60
 total_secs = total_seconds % 60
-print()
-print(f'⏱️  Total duration: {total_mins}:{total_secs:02d}')
+
+# Output header info for preview
+print(f'HEADER§§§{len(queue)}§§§{total_mins}:{total_secs:02d}§§§{current_idx}§§§{\"▶️\" if is_playing else \"⏸️\"}')
+
+# Output each track for selection
+for i, track in enumerate(queue):
+    marker = '▶' if i == current_idx else ' '
+    status = '●' if i == current_idx and is_playing else '○' if i == current_idx else ' '
+    
+    # Format: index§§§marker§§§status§§§title§§§uploader§§§duration
+    print(f'{i}§§§{marker}§§§{status}§§§{track[\"Title\"]}§§§{track[\"Uploader\"]}§§§{track[\"Duration\"]}')
+" | {
+    # Read header
+    IFS= read -r header_line
+    
+    # Extract header info using parameter expansion
+    rest="$header_line"
+    rest="${rest#*§§§}"  # Skip HEADER
+    total_tracks="${rest%%§§§*}"
+    rest="${rest#*§§§}"
+    total_duration="${rest%%§§§*}"
+    rest="${rest#*§§§}"
+    current_idx="${rest%%§§§*}"
+    rest="${rest#*§§§}"
+    play_status="$rest"
+    
+    # Create header for fzf
+    HEADER="╔═══════════════════════════════════════════════════════════════════════════════╗
+║  🎵 Playlist: $total_tracks tracks │ ⏱️  Total: $total_duration │ Status: $play_status                  ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║  Press ENTER to jump to track │ ESC to exit                                  ║
+╚═══════════════════════════════════════════════════════════════════════════════╝"
+    
+    # Format tracks for fzf
+    cat | awk -F'§§§' '{
+        idx = $1
+        marker = $2
+        status = $3
+        title = $4
+        uploader = $5
+        duration = $6
+        
+        # Color codes
+        if (marker == "▶") {
+            # Currently playing track - bold green
+            printf "\033[1;32m%s %s %2d. %-50s\033[0m \033[2;37m%-30s %s\033[0m§§§%s\n", marker, status, idx+1, substr(title, 1, 50), substr(uploader, 1, 30), duration, idx
+        } else {
+            # Other tracks - gray
+            printf "\033[2;37m%s %s %2d.\033[0m %-50s \033[2;37m%-30s %s\033[0m§§§%s\n", marker, status, idx+1, substr(title, 1, 50), substr(uploader, 1, 30), duration, idx
+        }
+    }' | fzf \
+        --ansi \
+        --reverse \
+        --no-sort \
+        --header="$HEADER" \
+        --prompt="🎵 Select track: " \
+        --pointer="▶" \
+        --color="header:italic:white,prompt:bold:blue,pointer:bold:green,marker:bold:red" \
+        --preview-window=hidden \
+        --height=100% \
+        --bind="esc:cancel"
+}
+
+# Get result - fzf outputs the full line
+RESULT=$?
+
+# Read the output
+SELECTED_LINE=$(cat)
+
+if [ $RESULT -eq 130 ]; then
+    # User pressed ESC
+    exit 0
+fi
+
+if [ -n "$SELECTED_LINE" ]; then
+    # Extract index from end of line
+    TRACK_IDX="${SELECTED_LINE##*§§§}"
+    echo ""
+    echo "⏭️  Jumping to track $(($TRACK_IDX + 1))..."
+    
+    # Send JumpTo command
+    echo "{\"command\":\"JumpTo\",\"data\":{\"Index\":$TRACK_IDX}}" | \
+        socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock > /dev/null 2>&1
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Now playing track $(($TRACK_IDX + 1))"
+    else
+        echo "❌ Failed to jump to track"
+        exit 1
+    fi
+fi
 "
