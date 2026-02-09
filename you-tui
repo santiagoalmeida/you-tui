@@ -124,10 +124,16 @@ case "$COMMAND" in
             exit 1
         fi
         
+        if ! systemctl --user is-active --quiet you-tui-daemon; then
+            echo "❌ Daemon is not running. Start it with: you-tui start"
+            exit 1
+        fi
+        
         echo "🔍 Searching for: $QUERY"
         echo ""
         
-        yt-dlp --no-warnings -J --flat-playlist "ytsearch10:$QUERY" 2>/dev/null | \
+        # Search and let user select with fzf
+        yt-dlp --no-warnings -J --flat-playlist "ytsearch20:$QUERY" 2>/dev/null | \
         python3 -c "
 import sys, json
 
@@ -136,12 +142,11 @@ try:
     entries = data.get('entries', [])
     
     if not entries:
-        print('❌ No results found')
+        print('❌ No results found', file=sys.stderr)
         sys.exit(1)
     
-    print(f'Found {len(entries)} results:\n')
-    
-    for i, entry in enumerate(entries, 1):
+    # Output in format for fzf: title|channel|duration|id
+    for entry in entries:
         title = entry.get('title', 'Unknown')
         channel = entry.get('channel', entry.get('uploader', 'Unknown'))
         duration = entry.get('duration', 0)
@@ -153,16 +158,48 @@ try:
             secs = int(duration % 60)
             dur_str = f'{mins:02d}:{secs:02d}'
         else:
-            dur_str = 'Unknown'
+            dur_str = '??:??'
         
-        print(f'{i:2d}. {title}')
-        print(f'    by {channel} - {dur_str}')
-        print(f'    https://www.youtube.com/watch?v={video_id}')
-        print()
+        # Output: display text|json data
+        display = f'{title} | {channel} | {dur_str}'
+        json_data = json.dumps({
+            'Id': video_id,
+            'Title': title,
+            'Uploader': channel,
+            'Duration': dur_str,
+            'Url': f'https://www.youtube.com/watch?v={video_id}',
+            'Thumbnail': entry.get('thumbnail', '')
+        })
+        print(f'{display}|||{json_data}')
+        
 except Exception as e:
     print(f'❌ Error: {e}', file=sys.stderr)
     sys.exit(1)
-"
+" | fzf --multi \
+    --prompt="Select tracks to add (TAB for multi-select, ENTER to add): " \
+    --preview='echo {}' \
+    --preview-window=hidden \
+    --height=~100% \
+    --header="Search results for: $QUERY" | \
+while IFS='|||' read -r display data; do
+    echo "➕ Adding: $(echo "$display" | cut -d'|' -f1)"
+    
+    # Send AddTrack command
+    echo "{\"command\":\"AddTrack\",\"data\":$(echo "$data" | jq -c '{Track:.}')}" | \
+        socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock > /dev/null 2>&1
+    
+    if [ $? -eq 0 ]; then
+        echo "   ✅ Added successfully"
+    else
+        echo "   ❌ Failed to add"
+    fi
+done
+
+ADDED=$?
+if [ $ADDED -eq 0 ]; then
+    echo ""
+    echo "✅ Tracks added to playlist"
+fi
         ;;
     
     clear)
@@ -204,7 +241,7 @@ Playback Control:
   prev          Go to previous track
   
 Playlist Management:
-  search <q>    Search for songs on YouTube
+  search <q>    Search for songs and add to playlist (interactive)
   clear         Clear the playlist
   
 Information:
