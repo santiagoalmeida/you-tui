@@ -170,7 +170,8 @@ try:
             'Url': f'https://www.youtube.com/watch?v={video_id}',
             'Thumbnail': entry.get('thumbnail', '')
         })
-        print(f'{display}|||{json_data}')
+        # Use unique separator that won't appear in titles
+        print(f'{display}§§§{json_data}')
         
 except Exception as e:
     print(f'❌ Error: {e}', file=sys.stderr)
@@ -181,8 +182,17 @@ except Exception as e:
     --preview-window=hidden \
     --height=~100% \
     --header="Search results for: $QUERY" | \
-while IFS='|||' read -r display data; do
-    echo "➕ Adding: $(echo "$display" | cut -d'|' -f1)"
+while IFS= read -r line; do
+    # Split by §§§
+    display="${line%%§§§*}"
+    data="${line##*§§§}"
+    
+    if [ "$display" = "$data" ]; then
+        # No separator found, skip
+        continue
+    fi
+    
+    echo "➕ Adding: $(echo "$display" | awk -F' \\| ' '{print $1}')"
     
     # Send AddTrack command - data is already JSON, wrap it properly
     echo "$data" | python3 -c "
