@@ -184,9 +184,16 @@ except Exception as e:
 while IFS='|||' read -r display data; do
     echo "➕ Adding: $(echo "$display" | cut -d'|' -f1)"
     
-    # Send AddTrack command
-    echo "{\"command\":\"AddTrack\",\"data\":$(echo "$data" | jq -c '{Track:.}')}" | \
-        socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock > /dev/null 2>&1
+    # Send AddTrack command - data is already JSON, wrap it properly
+    echo "$data" | python3 -c "
+import sys, json
+track = json.load(sys.stdin)
+command = {
+    'command': 'AddTrack',
+    'data': {'Track': track}
+}
+print(json.dumps(command))
+" | socat - UNIX-CONNECT:/tmp/you-tui-daemon.sock > /dev/null 2>&1
     
     if [ $? -eq 0 ]; then
         echo "   ✅ Added successfully"
